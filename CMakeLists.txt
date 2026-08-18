@@ -14,7 +14,7 @@ project(vita2048 C)
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 set(VITA_APP_NAME "2048")
-set(VITA_TITLEID  "V2048NAR1")
+set(VITA_TITLEID  "NARM20481")
 set(VITA_VERSION  "01.00")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -O2 -std=c99")

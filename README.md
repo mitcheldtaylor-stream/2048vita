@@ -52,6 +52,7 @@ cmake --build build
 - [src/main.c](src/main.c) — game loop, controller input, vita2d rendering
 - [CMakeLists.txt](CMakeLists.txt) — build and VPK packaging
 
-The title ID is `V2048NAR1`. If you ever want two builds installed side by side,
+The title ID is `NARM20481`. If you ever want two builds installed side by side,
 change `VITA_TITLEID` in [CMakeLists.txt](CMakeLists.txt) — it must be 9
-characters, 4 letters followed by 5 digits/letters.
+characters: exactly 4 uppercase letters followed by 5 digits. The installer
+rejects anything else with error 0x8010113D.
