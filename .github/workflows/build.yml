@@ -89,8 +89,28 @@ jobs:
           cmake --build build -j"$(nproc)"
           ls -l build/*.vpk
 
+      - name: Build diagnostic variants
+        shell: bash
+        run: |
+          set -eux
+          cd build
+
+          # A: bare minimum - no sce_sys assets at all, default icon
+          vita-mksfoex -s TITLE_ID=NARM20481 -s APP_VER=01.00 '2048' param_min.sfo
+          vita-pack-vpk -s param_min.sfo -b vita2048.self A-minimal.vpk
+
+          # B: icon only, still no LiveArea directory
+          vita-pack-vpk -s param_min.sfo -b vita2048.self \
+            -a ../sce_sys/icon0.png=sce_sys/icon0.png \
+            B-icononly.vpk
+
+          ls -l A-minimal.vpk B-icononly.vpk vita2048.vpk
+
       - uses: actions/upload-artifact@v4
         with:
           name: vita2048-vpk
-          path: build/vita2048.vpk
+          path: |
+            build/vita2048.vpk
+            build/A-minimal.vpk
+            build/B-icononly.vpk
           if-no-files-found: error
