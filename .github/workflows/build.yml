@@ -44,18 +44,15 @@ jobs:
           # ImageMagick has no font configured in this container, so point it
           # at a TTF explicitly. If none is found, fall back to plain tiles
           # rather than failing the build.
-          FONT=""
-          for f in \
-            /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf \
-            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
-            /usr/share/fonts/TTF/DejaVuSans-Bold.ttf; do
-            if [ -f "$f" ]; then FONT="$f"; break; fi
-          done
+          FONT="$(find /usr/share/fonts -name '*Bold*.ttf' 2>/dev/null | head -1)"
+          [ -n "$FONT" ] || FONT="$(find /usr/share/fonts -name '*.ttf' 2>/dev/null | head -1)"
+          echo "using font: ${FONT:-<none, tiles will be blank>}"
 
-          # The LiveArea decoder rejects exotic PNG encodings, and ImageMagick
-          # will happily emit a 1-bit or palette PNG for a flat colour. PNG32:
-          # plus an explicit type/depth forces plain 8-bit RGBA, non-interlaced.
-          PNGOPTS="-type TrueColorAlpha -depth 8 -interlace none -define png:color-type=6 -define png:bit-depth=8"
+          # The installer only accepts INDEXED (palette) PNGs for sce_sys art.
+          # 24-bit RGB and 32-bit RGBA both fail with 0x8010113D, verified by
+          # testing all three encodings on hardware. -strip drops the ancillary
+          # sRGB/gAMA chunks, which the decoder also dislikes.
+          PNGOPTS="-strip -alpha off -colors 64 -interlace none"
 
           # Draws a solid tile, with the "2048" label only if a font was found.
           tile() {
@@ -63,9 +60,9 @@ jobs:
             if [ -n "$FONT" ]; then
               $IM -size "$size" "xc:$bg" -font "$FONT" -gravity center \
                 -fill '#F9F6F2' -pointsize "$pointsize" -annotate 0 '2048' \
-                $PNGOPTS "PNG32:$out"
+                $PNGOPTS "PNG8:$out"
             else
-              $IM -size "$size" "xc:$bg" $PNGOPTS "PNG32:$out"
+              $IM -size "$size" "xc:$bg" $PNGOPTS "PNG8:$out"
             fi
           }
 
@@ -73,7 +70,7 @@ jobs:
           tile 128x128 '#EDC22E' 40 sce_sys/icon0.png
           tile 280x158 '#EDC22E' 48 sce_sys/livearea/contents/startup.png
           $IM -size 840x500 'xc:#FAF8EF' $PNGOPTS \
-            PNG32:sce_sys/livearea/contents/bg.png
+            PNG8:sce_sys/livearea/contents/bg.png
 
           echo "--- generated PNG formats ---"
           identify -verbose sce_sys/icon0.png | grep -iE 'geometry|type|depth|interlace|colorspace' || true
@@ -89,46 +86,8 @@ jobs:
           cmake --build build -j"$(nproc)"
           ls -l build/*.vpk
 
-      - name: Build diagnostic variants
-        shell: bash
-        run: |
-          set -eux
-          cd build
-
-          # A: bare minimum - no sce_sys assets at all, default icon
-          vita-mksfoex -s TITLE_ID=NARM20481 -s APP_VER=01.00 '2048' param_min.sfo
-          vita-pack-vpk -s param_min.sfo -b vita2048.self A-minimal.vpk
-
-          if command -v magick >/dev/null; then IM=magick; else IM=convert; fi
-
-          # icon0.png variants: the installer rejected our 32-bit RGBA icon, so
-          # try progressively plainer encodings to find what it accepts.
-          # B1: 24-bit RGB, no alpha, all ancillary chunks stripped
-          $IM -size 128x128 'xc:#EDC22E' -strip -alpha off -type TrueColor \
-            -interlace none PNG24:icon-b1.png
-          # B2: 32-bit RGBA but stripped of colour-profile chunks
-          $IM -size 128x128 'xc:#EDC22E' -strip -type TrueColorAlpha \
-            -interlace none PNG32:icon-b2.png
-          # B3: 8-bit indexed palette, stripped
-          $IM -size 128x128 'xc:#EDC22E' -strip -alpha off -colors 16 \
-            -interlace none PNG8:icon-b3.png
-
-          for v in b1 b2 b3; do
-            vita-pack-vpk -s param_min.sfo -b vita2048.self \
-              -a "icon-$v.png=sce_sys/icon0.png" "B-$v.vpk"
-          done
-
-          echo "--- icon variants ---"
-          identify icon-b1.png icon-b2.png icon-b3.png
-          ls -l A-minimal.vpk B-b1.vpk B-b2.vpk B-b3.vpk vita2048.vpk
-
       - uses: actions/upload-artifact@v4
         with:
           name: vita2048-vpk
-          path: |
-            build/vita2048.vpk
-            build/A-minimal.vpk
-            build/B-b1.vpk
-            build/B-b2.vpk
-            build/B-b3.vpk
+          path: build/vita2048.vpk
           if-no-files-found: error
