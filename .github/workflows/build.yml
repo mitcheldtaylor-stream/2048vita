@@ -99,12 +99,28 @@ jobs:
           vita-mksfoex -s TITLE_ID=NARM20481 -s APP_VER=01.00 '2048' param_min.sfo
           vita-pack-vpk -s param_min.sfo -b vita2048.self A-minimal.vpk
 
-          # B: icon only, still no LiveArea directory
-          vita-pack-vpk -s param_min.sfo -b vita2048.self \
-            -a ../sce_sys/icon0.png=sce_sys/icon0.png \
-            B-icononly.vpk
+          if command -v magick >/dev/null; then IM=magick; else IM=convert; fi
 
-          ls -l A-minimal.vpk B-icononly.vpk vita2048.vpk
+          # icon0.png variants: the installer rejected our 32-bit RGBA icon, so
+          # try progressively plainer encodings to find what it accepts.
+          # B1: 24-bit RGB, no alpha, all ancillary chunks stripped
+          $IM -size 128x128 'xc:#EDC22E' -strip -alpha off -type TrueColor \
+            -interlace none PNG24:icon-b1.png
+          # B2: 32-bit RGBA but stripped of colour-profile chunks
+          $IM -size 128x128 'xc:#EDC22E' -strip -type TrueColorAlpha \
+            -interlace none PNG32:icon-b2.png
+          # B3: 8-bit indexed palette, stripped
+          $IM -size 128x128 'xc:#EDC22E' -strip -alpha off -colors 16 \
+            -interlace none PNG8:icon-b3.png
+
+          for v in b1 b2 b3; do
+            vita-pack-vpk -s param_min.sfo -b vita2048.self \
+              -a "icon-$v.png=sce_sys/icon0.png" "B-$v.vpk"
+          done
+
+          echo "--- icon variants ---"
+          identify icon-b1.png icon-b2.png icon-b3.png
+          ls -l A-minimal.vpk B-b1.vpk B-b2.vpk B-b3.vpk vita2048.vpk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -112,5 +128,7 @@ jobs:
           path: |
             build/vita2048.vpk
             build/A-minimal.vpk
-            build/B-icononly.vpk
+            build/B-b1.vpk
+            build/B-b2.vpk
+            build/B-b3.vpk
           if-no-files-found: error
