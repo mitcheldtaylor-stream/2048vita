@@ -20,9 +20,9 @@ jobs:
           if command -v apt-get >/dev/null; then
             export DEBIAN_FRONTEND=noninteractive
             apt-get update
-            apt-get install -y --no-install-recommends cmake make imagemagick zip python3
+            apt-get install -y --no-install-recommends cmake make imagemagick zip python3 fonts-dejavu-core
           elif command -v apk >/dev/null; then
-            apk add --no-cache cmake make imagemagick zip python3
+            apk add --no-cache cmake make imagemagick zip python3 ttf-dejavu
           else
             echo "no supported package manager found" >&2
             exit 1
@@ -41,14 +41,32 @@ jobs:
             IM="convert"
           fi
 
+          # ImageMagick has no font configured in this container, so point it
+          # at a TTF explicitly. If none is found, fall back to plain tiles
+          # rather than failing the build.
+          FONT=""
+          for f in \
+            /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf \
+            /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+            /usr/share/fonts/TTF/DejaVuSans-Bold.ttf; do
+            if [ -f "$f" ]; then FONT="$f"; break; fi
+          done
+
+          # Draws a solid tile, with the "2048" label only if a font was found.
+          tile() {
+            size="$1"; bg="$2"; pointsize="$3"; out="$4"
+            if [ -n "$FONT" ]; then
+              $IM -size "$size" "xc:$bg" -font "$FONT" -gravity center \
+                -fill '#F9F6F2' -pointsize "$pointsize" -annotate 0 '2048' "$out"
+            else
+              $IM -size "$size" "xc:$bg" "$out"
+            fi
+          }
+
           # icon0.png must be exactly 128x128
-          $IM -size 128x128 xc:'#EDC22E' \
-            -gravity center -fill '#F9F6F2' -pointsize 40 -annotate 0 '2048' \
-            sce_sys/icon0.png
-          $IM -size 840x500 xc:'#FAF8EF' sce_sys/livearea/contents/bg.png
-          $IM -size 280x158 xc:'#EDC22E' \
-            -gravity center -fill '#F9F6F2' -pointsize 48 -annotate 0 '2048' \
-            sce_sys/livearea/contents/startup.png
+          tile 128x128 '#EDC22E' 40 sce_sys/icon0.png
+          tile 280x158 '#EDC22E' 48 sce_sys/livearea/contents/startup.png
+          $IM -size 840x500 'xc:#FAF8EF' sce_sys/livearea/contents/bg.png
 
           ls -l sce_sys sce_sys/livearea/contents
 
