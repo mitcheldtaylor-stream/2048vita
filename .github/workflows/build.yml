@@ -70,19 +70,6 @@ jobs:
 
           ls -l sce_sys sce_sys/livearea/contents
 
-      - name: Probe font stubs
-        shell: bash
-        run: |
-          LIBDIR=/usr/local/vitasdk/arm-vita-eabi/lib
-          echo "--- stubs matching font/pgf ---"
-          ls "$LIBDIR" | grep -iE 'font|pgf' || echo "(none by name)"
-          echo "--- stub exporting sceFontNewLib ---"
-          for a in "$LIBDIR"/*_stub.a; do
-            if arm-vita-eabi-nm -g --defined-only "$a" 2>/dev/null | grep -q sceFontNewLib; then
-              echo "FOUND: $a"
-            fi
-          done
-
       - name: Build
         shell: bash
         run: |
