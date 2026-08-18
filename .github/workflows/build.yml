@@ -52,21 +52,32 @@ jobs:
             if [ -f "$f" ]; then FONT="$f"; break; fi
           done
 
+          # The LiveArea decoder rejects exotic PNG encodings, and ImageMagick
+          # will happily emit a 1-bit or palette PNG for a flat colour. PNG32:
+          # plus an explicit type/depth forces plain 8-bit RGBA, non-interlaced.
+          PNGOPTS="-type TrueColorAlpha -depth 8 -interlace none -define png:color-type=6 -define png:bit-depth=8"
+
           # Draws a solid tile, with the "2048" label only if a font was found.
           tile() {
             size="$1"; bg="$2"; pointsize="$3"; out="$4"
             if [ -n "$FONT" ]; then
               $IM -size "$size" "xc:$bg" -font "$FONT" -gravity center \
-                -fill '#F9F6F2' -pointsize "$pointsize" -annotate 0 '2048' "$out"
+                -fill '#F9F6F2' -pointsize "$pointsize" -annotate 0 '2048' \
+                $PNGOPTS "PNG32:$out"
             else
-              $IM -size "$size" "xc:$bg" "$out"
+              $IM -size "$size" "xc:$bg" $PNGOPTS "PNG32:$out"
             fi
           }
 
           # icon0.png must be exactly 128x128
           tile 128x128 '#EDC22E' 40 sce_sys/icon0.png
           tile 280x158 '#EDC22E' 48 sce_sys/livearea/contents/startup.png
-          $IM -size 840x500 'xc:#FAF8EF' sce_sys/livearea/contents/bg.png
+          $IM -size 840x500 'xc:#FAF8EF' $PNGOPTS \
+            PNG32:sce_sys/livearea/contents/bg.png
+
+          echo "--- generated PNG formats ---"
+          identify -verbose sce_sys/icon0.png | grep -iE 'geometry|type|depth|interlace|colorspace' || true
+          identify sce_sys/icon0.png sce_sys/livearea/contents/*.png
 
           ls -l sce_sys sce_sys/livearea/contents
 

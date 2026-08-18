@@ -7,9 +7,4 @@
   <gate>
     <startup-image>startup.png</startup-image>
   </gate>
-
-  <text word-wrap="on" line-align="left" text-align="left" ellipsis="off">
-    <str size="20" color="#776E65">2048</str>
-    <str size="14" color="#776E65">Join the tiles, get to 2048!</str>
-  </text>
 </livearea>
