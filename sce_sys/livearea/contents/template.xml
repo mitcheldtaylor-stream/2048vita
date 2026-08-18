@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<livearea style="a1" format-ver="01.00" content-rev="1">
+  <livearea-background>
+    <image>bg.png</image>
+  </livearea-background>
+
+  <gate>
+    <startup-image>startup.png</startup-image>
+  </gate>
+
+  <text word-wrap="on" line-align="left" text-align="left" ellipsis="off">
+    <str size="20" color="#776E65">2048</str>
+    <str size="14" color="#776E65">Join the tiles, get to 2048!</str>
+  </text>
+</livearea>

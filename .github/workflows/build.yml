@@ -1,0 +1,39 @@
+name: build vpk
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: vitasdk/vitasdk:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: apk add --no-cache cmake make imagemagick zip
+
+      - name: Generate LiveArea artwork
+        run: |
+          mkdir -p sce_sys/livearea/contents
+          # icon0.png must be exactly 128x128
+          magick -size 128x128 xc:'#EDC22E' \
+            -gravity center -fill '#F9F6F2' -pointsize 40 -annotate 0 '2048' \
+            sce_sys/icon0.png
+          magick -size 840x500 xc:'#FAF8EF' sce_sys/livearea/contents/bg.png
+          magick -size 280x158 xc:'#EDC22E' \
+            -gravity center -fill '#F9F6F2' -pointsize 48 -annotate 0 '2048' \
+            sce_sys/livearea/contents/startup.png
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j"$(nproc)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vita2048-vpk
+          path: build/vita2048.vpk
